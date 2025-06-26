@@ -8,6 +8,10 @@ on:
         required: true
         default: "DEV"
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
