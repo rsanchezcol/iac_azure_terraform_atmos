@@ -69,4 +69,6 @@ jobs:
 
     - name: 🔎 Terraform Plan
       working-directory: terraform
+      env:
+         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=$VM_PASSWORD"
