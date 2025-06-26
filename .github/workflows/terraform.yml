@@ -1,4 +1,4 @@
-name: Terraform CI/CD Workflow for Multiple Environments
+name: Terraform CI/CD Workflow for Azure Resources
 
 on:
   workflow_dispatch:
@@ -13,19 +13,33 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TF_ENV: ${{ github.event.inputs.environment }}
+      TF_ENV: ${{github.event.inputs.environment}} # Input variable for environment (DEV, STG, PROD)
 
     steps:
     - name: 📥 Checkout Code
       uses: actions/checkout@v3
 
-    - name: Validate Environment Input
+    - name: 🔐 Validate Environment Input
       run: |
         if [[ ! "${{ env.TF_ENV }}" =~ ^(DEV|STG|PROD)$ ]]; then
           echo "❌ Invalid environment. Must be one of: DEV, STG, PROD."
           exit 1
         fi
         echo "✅ Deploying to ${{ env.TF_ENV }} environment."
+
+    - name: Set Environment-Specific VM Password in env variable
+      id: set-password
+      run: |
+        if [ "${{ env.TF_ENV }}" = "DEV" ]; then
+          echo "VM_PASSWORD=${{ secrets.VM_PASSWORD_DEV }}" >> $GITHUB_ENV
+        elif [ "${{ env.TF_ENV }}" = "STG" ]; then
+          echo "VM_PASSWORD=${{ secrets.VM_PASSWORD_STG }}" >> $GITHUB_ENV
+        elif [ "${{ env.TF_ENV }}" = "PROD" ]; then
+          echo "VM_PASSWORD=${{ secrets.VM_PASSWORD_PROD }}" >> $GITHUB_ENV
+        else
+          echo "❌ Invalid environment. Exiting."
+          exit 1
+        fi
 
     - name: Login to Azure
       uses: azure/login@v1
@@ -44,5 +58,6 @@ jobs:
       working-directory: terraform
       run: terraform init
 
-    - name: Terraform Plan
-      run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=${{ secrets['VM_PASSWORD_' + env.TF_ENV] }}"
+    - name: 🔎 Terraform Plan
+      working-directory: terraform
+      run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=$VM_PASSWORD"
