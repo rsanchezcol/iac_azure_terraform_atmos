@@ -59,12 +59,6 @@ output "network_interface_name" {
   value       = azurerm_network_interface.nic.name
 }
 
-# Output the Admin Username for the VM
-output "vm_admin_username" {
-  description = "The admin username for the virtual machine"
-  value       = azurerm_virtual_machine.vm.os_profile[0].admin_username
-}
-
 # Output the Public IP Host (allow external SSH or HTTP to the VM)
 output "vm_public_ip" {
   description = "The public IP address of the virtual machine"
