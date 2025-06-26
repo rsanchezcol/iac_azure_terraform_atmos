@@ -11,9 +11,13 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-
+    environment: ${{github.event.inputs.environment}}
     env:
       TF_ENV: ${{github.event.inputs.environment}} # Input variable for environment (DEV, STG, PROD)
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID:  ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
     steps:
     - name: 📥 Checkout Code
@@ -43,12 +47,11 @@ jobs:
 
     - name: Login to Azure
       uses: azure/login@v1
-      env: ${{ env.TF_ENV }}
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+        client-secret: ${{ env.AZURE_CLIENT_SECRET }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
