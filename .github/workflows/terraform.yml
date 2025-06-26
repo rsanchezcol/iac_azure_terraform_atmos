@@ -19,7 +19,7 @@ jobs:
     - name: 📥 Checkout Code
       uses: actions/checkout@v3
 
-    - name: 🔐 Validate Environment Input
+    - name: Validate Environment Input
       run: |
         if [[ ! "${{ env.TF_ENV }}" =~ ^(DEV|STG|PROD)$ ]]; then
           echo "❌ Invalid environment. Must be one of: DEV, STG, PROD."
@@ -40,8 +40,9 @@ jobs:
       with:
         terraform_version: 1.5.5
 
-    - name: 🏗️ Initialize Terraform
+    - name: Initialize Terraform
+      working-directory: terraform
       run: terraform init
 
-    - name: 🏗️ Terraform Plan
+    - name: Terraform Plan
       run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=${{ secrets['VM_PASSWORD_' + env.TF_ENV] }}"
