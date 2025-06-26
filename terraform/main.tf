@@ -18,10 +18,20 @@ variable "vm_admin_password" {
   sensitive   = true
 }
 
+variable "vm_size" {
+  description = "Size of the virtual machine"
+  default     = "Standard_DS1_v2"
+}
+
+variable "location" {
+  description = "Azure region where resources will be provisioned"
+  default     = "East US"
+}
+
 # Create a Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = "rg-${var.environment}-secure-infra"
-  location = "East US"
+  location = var.location
 }
 
 # Create a Virtual Network
@@ -153,7 +163,7 @@ resource "azurerm_virtual_machine" "vm" {
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
   network_interface_ids = [azurerm_network_interface.nic.id]
-  size                  = "Standard_DS1_v2"
+  vm_size               = var.vm_size
 
   storage_image_reference {
     publisher = "Canonical"
