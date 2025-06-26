@@ -1,0 +1,47 @@
+name: Terraform CI/CD Workflow for Multiple Environments
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which environment to deploy? (DEV, STG, PROD)"
+        required: true
+        default: "DEV"
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    env:
+      TF_ENV: ${{ github.event.inputs.environment }}
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v3
+
+    - name: 🔐 Validate Environment Input
+      run: |
+        if [[ ! "${{ env.TF_ENV }}" =~ ^(DEV|STG|PROD)$ ]]; then
+          echo "❌ Invalid environment. Must be one of: DEV, STG, PROD."
+          exit 1
+        fi
+        echo "✅ Deploying to ${{ env.TF_ENV }} environment."
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.5.5
+
+    - name: 🏗️ Initialize Terraform
+      run: terraform init
+
+    - name: 🏗️ Terraform Plan
+      run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=${{ secrets['VM_PASSWORD_' + env.TF_ENV] }}"
