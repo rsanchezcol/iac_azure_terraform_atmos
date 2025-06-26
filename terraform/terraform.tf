@@ -2,7 +2,7 @@ provider "azurerm" {
   features {}
 }
 
-# Define variables for dynamic input
+# Define Input Variables
 variable "environment" {
   description = "The environment in which resources will be deployed (DEV, STG, PROD)"
   type        = string
@@ -18,30 +18,37 @@ variable "vm_admin_password" {
   sensitive   = true
 }
 
-# Resource Group based on environment
+# Create a Resource Group
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-${var.environment}-environment"
+  name     = "rg-${var.environment}-secure-infra"
   location = "East US"
 }
 
-# Virtual Network
+# Create a Virtual Network
 resource "azurerm_virtual_network" "vnet" {
-  name                = "vnet-${var.environment}"
+  name                = "${var.environment}-vnet"
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.0.0/16"]
 }
 
-# Subnets
-resource "azurerm_subnet" "subnet" {
-  name                 = "${var.environment}-subnet"
+# Create Subnets
+resource "azurerm_subnet" "backend_subnet" {
+  name                 = "backend-subnet-${var.environment}"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.1.0/24"]
 }
 
-# Network Security Group (NSG)
-resource "azurerm_network_security_group" "nsg" {
-  name                = "${var.environment}-nsg"
+resource "azurerm_subnet" "public_subnet" {
+  name                 = "public-subnet-${var.environment}"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.2.0/24"]
+}
+
+# Create Network Security Groups
+resource "azurerm_network_security_group" "nsg_public" {
+  name                = "public-nsg-${var.environment}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
 
@@ -70,40 +77,70 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
-# Public IP Address
+resource "azurerm_network_security_group" "nsg_backend" {
+  name                = "backend-nsg-${var.environment}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+
+  security_rule {
+    name                       = "allow_internal_traffic"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefixes    = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.0.0/16"]
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "deny_all"
+    priority                   = 200
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# Create Public IP Address for the Load Balancer
 resource "azurerm_public_ip" "public_ip" {
-  name                = "${var.environment}-public-ip"
+  name                = "${var.environment}-load-balancer-public-ip"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   allocation_method   = "Static"
 }
 
-# Load Balancer
+# Create Azure Load Balancer
 resource "azurerm_lb" "lb" {
-  name                = "${var.environment}-lb"
-  resource_group_name = azurerm_resource_group.rg.name
+  name                = "${var.environment}-app-load-balancer"
   location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
   sku                 = "Standard"
 
   frontend_ip_configuration {
-    name                 = "${var.environment}-frontend-ip"
+    name                 = "${var.environment}-frontend-ip-conf"
     public_ip_address_id = azurerm_public_ip.public_ip.id
   }
 }
 
-# Backend Pool for Load Balancer
+# Create Backend Pool for Load Balancer
 resource "azurerm_lb_backend_address_pool" "backend_pool" {
   loadbalancer_id     = azurerm_lb.lb.id
   resource_group_name = azurerm_resource_group.rg.name
   name                = "${var.environment}-backend-pool"
 }
 
-# Network Interface
+# Create Virtual Machine (VM)
 resource "azurerm_network_interface" "nic" {
-  name                = "${var.environment}-nic"
+  name                = "${var.environment}-vm-nic"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  subnet_id           = azurerm_subnet.subnet.id
+  subnet_id           = azurerm_subnet.backend_subnet.id
 
   ip_configuration {
     name                          = "${var.environment}-ip-config"
@@ -111,7 +148,6 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# Virtual Machine
 resource "azurerm_virtual_machine" "vm" {
   name                  = "vm-${var.environment}"
   location              = azurerm_resource_group.rg.location
@@ -134,7 +170,7 @@ resource "azurerm_virtual_machine" "vm" {
   }
 
   os_profile {
-    computer_name  = "vm-${var.environment}"
+    computer_name  = "${var.environment}-web-server"
     admin_username = "azureuser"
     admin_password = var.vm_admin_password
   }
@@ -144,11 +180,22 @@ resource "azurerm_virtual_machine" "vm" {
   }
 }
 
-# Output Resources
-output "resource_group_name" {
-  value = azurerm_resource_group.rg.name
-}
+# Provision File with "Hello World" Content
+resource "null_resource" "install_httpd" {
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt update",
+      "sudo apt install -y apache2",
+      "echo '<html><body><h1>Hello World</h1></body></html>' | sudo tee /var/www/html/index.html",
+      "sudo systemctl start apache2",
+      "sudo systemctl enable apache2"
+    ]
 
-output "vm_name" {
-  value = azurerm_virtual_machine.vm.name
+    connection {
+      type     = "ssh"
+      host     = azurerm_public_ip.public_ip.ip_address
+      user     = "azureuser"
+      password = var.vm_admin_password
+    }
+  }
 }
