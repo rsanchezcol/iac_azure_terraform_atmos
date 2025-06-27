@@ -64,7 +64,7 @@ resource "azurerm_network_security_group" "nsg_backend" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefixes    = "*"
+    source_address_prefix      = "*"
     destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
   }
 
