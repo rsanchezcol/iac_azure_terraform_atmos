@@ -1,0 +1,22 @@
+# stacks/dev.yaml
+
+vars:
+  environment: DEV
+  location: East US
+  vm_name: terraform-vm-dev
+  vm_size: Standard_DS1_v2
+  vm_admin_password: <secure-password-for-dev>      # Use secrets management like AWS SSM or Azure Key Vault
+  network_segment:
+    address_space: ["10.0.0.0/16"]
+    backend_subnet_prefixes: ["10.0.1.0/24"]
+    bastion_subnet_prefixes: ["10.0.2.0/24"]
+    source_address_prefixes: ["10.0.0.0/16"]
+  vm_image:
+    publisher: Canonical
+    offer: UbuntuServer
+    sku: 18.04-LTS
+    version: latest
+  os_disk:
+    caching: ReadWrite
+    create_option: FromImage
+    managed_disk_type: Standard_LRS
