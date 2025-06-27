@@ -40,72 +40,43 @@ resource "azurerm_subnet" "backend_subnet" {
   address_prefixes     = var.network_segment[var.environment]["backend_subnet_prefixes"]
 }
 
-resource "azurerm_subnet" "public_subnet" {
-  name                 = "public-subnet-${var.environment}"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = var.network_segment[var.environment]["public_subnet_prefixes"]
-}
-
-# Create Network Security Groups
-resource "azurerm_network_security_group" "nsg_public" {
-  name                = "public-nsg-${var.environment}"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+# Create Network Security Group and rules to control the traffic
+# to and from the Virtual Machines in the Backend Pool
+resource "azurerm_network_security_group" "nsg_backend" {
+  name                = var.network_security_group_name
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
 
   security_rule {
-    name                       = "allow_http"
-    priority                   = 100
+    name                       = "ssh"
+    priority                   = 1022
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
+  }
+
+  security_rule {
+    name                       = "web"
+    priority                   = 1080
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "80"
     source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "deny_all"
-    priority                   = 200
-    direction                  = "Inbound"
-    access                     = "Deny"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
   }
 }
 
-resource "azurerm_network_security_group" "nsg_backend" {
-  name                = "backend-nsg-${var.environment}"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-
-  security_rule {
-    name                       = "allow_internal_traffic"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefixes    = var.network_segment[var.environment]["source_address_prefixes"]
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "deny_all"
-    priority                   = 200
-    direction                  = "Inbound"
-    access                     = "Deny"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
+# Associate the Network Security Group to the subnet to allow the
+# Network Security Group to control the traffic to and from the subnet
+resource "azurerm_subnet_network_security_group_association" "nsg_backend_association" {
+  subnet_id                 = azurerm_subnet.backend_subnet.id
+  network_security_group_id = azurerm_network_security_group.nsg_backend.id
 }
 
 # Create Virtual Machine (VM)
