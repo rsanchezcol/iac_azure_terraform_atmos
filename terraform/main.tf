@@ -43,9 +43,9 @@ resource "azurerm_subnet" "backend_subnet" {
 # Create Network Security Group and rules to control the traffic
 # to and from the Virtual Machines in the Backend Pool
 resource "azurerm_network_security_group" "nsg_backend" {
-  name                = var.network_security_group_name
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
+  name                = "backend-nsg-${var.environment}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
 
   security_rule {
     name                       = "ssh"
