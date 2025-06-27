@@ -53,33 +53,34 @@ resource "azurerm_subnet" "bastion_subnet" {
 # to and from the Virtual Machines in the Backend Pool
 resource "azurerm_network_security_group" "nsg_backend" {
   name                = "backend-nsg-${var.environment}"
-  location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
 
   security_rule {
-    name                       = "ssh"
-    priority                   = 1022
+    name                       = "allow_internal_traffic"
+    priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
-    protocol                   = "Tcp"
+    protocol                   = "*"
     source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "186.155.170.153"
-    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
+    destination_port_range     = "*"
+    source_address_prefixes    = var.network_segment[var.environment]["source_address_prefixes"]
+    destination_address_prefix = "*"
   }
 
   security_rule {
-    name                       = "web"
-    priority                   = 1080
+    name                       = "deny_all"
+    priority                   = 200
     direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
+    access                     = "Deny"
+    protocol                   = "*"
     source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "186.155.170.153"
-    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
   }
 }
+
 
 # Associate the Network Security Group to the subnet to allow the
 # Network Security Group to control the traffic to and from the subnet
