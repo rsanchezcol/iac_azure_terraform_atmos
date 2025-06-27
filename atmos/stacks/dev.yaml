@@ -5,7 +5,7 @@ vars:
   location: East US
   vm_name: terraform-vm-dev
   vm_size: Standard_D2als_v6
-  vm_admin_password: <secure-password-for-dev>      # Use secrets management like AWS SSM or Azure Key Vault
+  vm_admin_password: !!ref cmd:az keyvault secret show --name dev-vm-admin-password --vault-name dev-keyvault --query value -o tsv
   network_segment:
     address_space: ["10.0.0.0/16"]
     backend_subnet_prefixes: ["10.0.1.0/24"]
