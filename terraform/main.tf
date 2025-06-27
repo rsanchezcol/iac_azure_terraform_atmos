@@ -168,7 +168,7 @@ resource "azurerm_virtual_machine" "vm" {
 # and create a simple HTML page
 resource "azurerm_virtual_machine_extension" "extension" {
   name                 = "Nginx"
-  virtual_machine_id   = azurerm_linux_virtual_machine.vm.id
+  virtual_machine_id   = azurerm_virtual_machine.vm.id
   publisher            = "Microsoft.Azure.Extensions"
   type                 = "CustomScript"
   type_handler_version = "2.0"
@@ -218,7 +218,7 @@ resource "azurerm_lb_backend_address_pool" "backend_pool" {
 
 # Create a Load Balancer Rule to define how traffic will be
 # distributed to the Virtual Machines in the Backend Pool
-resource "azurerm_lb_rule" "example" {
+resource "azurerm_lb_rule" "lbrule" {
   loadbalancer_id                = azurerm_lb.lb.id
   name                           = "${var.environment}-test-rule"
   protocol                       = "Tcp"
