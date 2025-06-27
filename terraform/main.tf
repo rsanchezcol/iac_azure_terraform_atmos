@@ -1,7 +1,7 @@
 terraform {
   backend "azurerm" {
     resource_group_name  = "devops-secure-infra-rg"
-    storage_account_name = "terraformstateacct"
+    storage_account_name = "devopsterraformstateacct"
     container_name       = "tfstatefiles"
     key                  = "terraform.state"        # State file name stored in blob storage
   }
