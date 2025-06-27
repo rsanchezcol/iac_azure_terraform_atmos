@@ -54,7 +54,7 @@ variable "network_segment" {
 
 # VM name
 variable "vm_name" {
-  default     = "vm-webserver1-${var.environment}"
+  default     = "vm-webserver1"
   description = "Name of the virtual machine"
 }
 
