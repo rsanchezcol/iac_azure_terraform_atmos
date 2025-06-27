@@ -96,29 +96,7 @@ resource "azurerm_public_ip" "public_ip" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   allocation_method   = "Static"
-}
-
-# Create a NAT Gateway for outbound internet access of the 
-# Virtual Machines in the Backend Pool of the Load Balancer
-resource "azurerm_nat_gateway" "net_gw" {
-  name                = "${var.environment}-nat_gateway"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  sku_name            = "Standard"
-}
-
-# Associate one of the Public IPs to the NAT Gateway to route
-# traffic from the Virtual Machines to the internet
-resource "azurerm_nat_gateway_public_ip_association" "example" {
-  nat_gateway_id       = azurerm_nat_gateway.net_gw.id
-  public_ip_address_id = azurerm_public_ip.public_ip[0].id
-}
-
-# Associate the NAT Gateway to subnet to route 
-# traffic from the Virtual Machines to the internet
-resource "azurerm_subnet_nat_gateway_association" "net_gw_association" {
-  subnet_id      = azurerm_subnet.backend_subnet.id
-  nat_gateway_id = azurerm_nat_gateway.net_gw.id
+  sku                 = "Standard"
 }
 
 # Create Virtual Machine (VM)
@@ -131,6 +109,7 @@ resource "azurerm_network_interface" "nic" {
     name                          = "${var.environment}-ip-config"
     subnet_id                     = azurerm_subnet.backend_subnet.id
     private_ip_address_allocation = "Dynamic"
+    primary                       = true
   }
 }
 
@@ -208,9 +187,8 @@ resource "azurerm_lb" "lb" {
   sku                 = "Standard"
 
   frontend_ip_configuration {
-    name                          = "${var.environment}-frontend-ip-conf"
-    subnet_id                     = azurerm_subnet.backend_subnet.id
-    private_ip_address_allocation = "Dynamic"
+    name                 = "${var.environment}-frontend-ip-conf"
+    public_ip_address_id = azurerm_public_ip.public_ip[0].id
   }
 }
 
@@ -249,4 +227,15 @@ resource "azurerm_lb_rule" "lbrule" {
   frontend_ip_configuration_name = "${var.environment}-frontend-ip-conf"
   probe_id                       = azurerm_lb_probe.lbprobe.id
   backend_address_pool_ids       = [azurerm_lb_backend_address_pool.backend_pool.id]
+}
+
+resource "azurerm_lb_outbound_rule" "lb_outbound" {
+  name                    = "${var.environment}-test-outbound"
+  loadbalancer_id         = azurerm_lb.lb.id
+  protocol                = "Tcp"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
+
+  frontend_ip_configuration {
+    name = "${var.environment}-frontend-ip-conf"
+  }
 }
