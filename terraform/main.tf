@@ -29,7 +29,7 @@ resource "azurerm_virtual_network" "vnet" {
   name                = "${var.environment}-vnet"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  address_space       = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.0.0/16"]
+  address_space       = var.network_segment[var.environment]["address_space"]
 }
 
 # Create Subnets
@@ -37,14 +37,14 @@ resource "azurerm_subnet" "backend_subnet" {
   name                 = "backend-subnet-${var.environment}"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.1.0/24"]
+  address_prefixes     = var.network_segment[var.environment]["backend_subnet_prefixes"]
 }
 
 resource "azurerm_subnet" "public_subnet" {
   name                 = "public-subnet-${var.environment}"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.2.0/24"]
+  address_prefixes     = var.network_segment[var.environment]["public_subnet_prefixes"]
 }
 
 # Create Network Security Groups
@@ -91,7 +91,7 @@ resource "azurerm_network_security_group" "nsg_backend" {
     protocol                   = "*"
     source_port_range          = "*"
     destination_port_range     = "*"
-    source_address_prefixes    = ["10.${lookup({"DEV": "0", "STG": "1", "PROD": "2"}, var.environment)}.0.0/16"]
+    source_address_prefixes    = var.network_segment[var.environment]["source_address_prefixes"]
     destination_address_prefix = "*"
   }
 
@@ -149,17 +149,17 @@ resource "azurerm_network_interface" "nic" {
 }
 
 resource "azurerm_virtual_machine" "vm" {
-  name                  = "vm-${var.environment}"
+  name                  = var.vm_name
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
   network_interface_ids = [azurerm_network_interface.nic.id]
   vm_size               = var.vm_size
 
   storage_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
-    version   = "latest"
+    publisher = var.vm_image["publisher"]
+    offer     = var.vm_image["offer"]
+    sku       = var.vm_image["sku"]
+    version   = var.vm_image["version"]
   }
 
   storage_os_disk {
