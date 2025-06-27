@@ -5,7 +5,7 @@ vars:
   location: East US
   vm_name: terraform-vm-stg
   vm_size: Standard_D2als_v6
-  vm_admin_password: <secure-password-for-stg>
+  vm_admin_password: !!ref cmd:az keyvault secret show --name stg-vm-admin-password --vault-name stg-keyvault --query value -o tsv
   network_segment:
     address_space: ["10.1.0.0/16"]
     backend_subnet_prefixes: ["10.1.1.0/24"]
