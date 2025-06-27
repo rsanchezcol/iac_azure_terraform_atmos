@@ -211,7 +211,7 @@ resource "azurerm_lb_backend_address_pool" "backend_pool" {
 # Machines in the Backend Pool
 resource "azurerm_network_interface_backend_address_pool_association" "backend_address_pool_association" {
   network_interface_id    = azurerm_network_interface.nic.id
-  ip_configuration_name   = "${var.environment}-ipconfig"
+  ip_configuration_name   = "${var.environment}-ip-config"
   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
 }
 
