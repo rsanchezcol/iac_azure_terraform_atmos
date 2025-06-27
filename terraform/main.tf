@@ -239,21 +239,3 @@ resource "azurerm_lb_outbound_rule" "lb_outbound" {
     name = "${var.environment}-frontend-ip-conf"
   }
 }
-
-# Create Azure Key Vault
-resource "azurerm_key_vault" "kv" {
-  name                        = "${var.environment}-key-vault"
-  location                    = azurerm_resource_group.rg.location
-  resource_group_name         = azurerm_resource_group.rg.name
-  sku_name                    = "standard"
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  soft_delete_enabled         = true
-  purge_protection_enabled    = false  # Set to true for production use cases
-  enabled_for_disk_encryption = true   # Enable for disk encryption
-
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-    secrets   = ["get", "list", "set"]
-  }
-}
