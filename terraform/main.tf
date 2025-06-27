@@ -108,16 +108,6 @@ resource "azurerm_network_security_group" "nsg_backend" {
   }
 }
 
-# Associate Network Interface to the Backend Pool of the Load Balancer
-# The Network Interface will be used to route traffic to the Virtual
-# Machines in the Backend Pool
-resource "azurerm_network_interface_backend_address_pool_association" "backend_address_pool_association" {
-  count                   = 1
-  network_interface_id    = azurerm_network_interface.nic.id
-  ip_configuration_name   = "${var.environment}-ipconfig-${count.index}"
-  backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
-}
-
 # Create Virtual Machine (VM)
 resource "azurerm_network_interface" "nic" {
   name                = "${var.environment}-vm-nic"
@@ -216,6 +206,15 @@ resource "azurerm_lb_backend_address_pool" "backend_pool" {
   name                = "${var.environment}-backend-pool"
 }
 
+# Associate Network Interface to the Backend Pool of the Load Balancer
+# The Network Interface will be used to route traffic to the Virtual
+# Machines in the Backend Pool
+resource "azurerm_network_interface_backend_address_pool_association" "backend_address_pool_association" {
+  network_interface_id    = azurerm_network_interface.nic.id
+  ip_configuration_name   = "${var.environment}-ipconfig"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
+}
+
 # Create a Load Balancer Rule to define how traffic will be
 # distributed to the Virtual Machines in the Backend Pool
 resource "azurerm_lb_rule" "lbrule" {
@@ -225,7 +224,7 @@ resource "azurerm_lb_rule" "lbrule" {
   frontend_port                  = 80
   backend_port                   = 80
   disable_outbound_snat          = true
-  frontend_ip_configuration_name = "${var.environment}-frontend-ip"
+  frontend_ip_configuration_name = "${var.environment}-frontend-ip-conf"
   probe_id                       = azurerm_lb_probe.lbprobe.id
   backend_address_pool_ids       = [azurerm_lb_backend_address_pool.backend_pool.id]
 }
