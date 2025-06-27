@@ -4,13 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Which environment to deploy? (DEV, STG, PROD)"
+        description: "Select the environment to deploy resources (DEV, STG, PROD)"
         required: true
         default: "DEV"
+        type: choice
+        options:
+          - DEV
+          - STG
+          - PROD
       action:
-        description: "Action to perform (plan, plan-and-apply)"
+        description: "Select the action to perform (Plan only or Plan and Apply)"
         required: true
-        default: "plan" # Default action is terraform plan
+        default: "plan"
+        type: choice
+        options:
+          - plan          # Only runs Terraform Plan
+          - plan-and-apply # Runs Terraform Plan and Apply
 
 permissions:
   id-token: write
