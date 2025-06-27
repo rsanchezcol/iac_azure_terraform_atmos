@@ -1,0 +1,5 @@
+# atmos.yaml
+components:
+  terraform:
+    base_path: components/terraform
+    workspace: dev                # Default workspace (can be overridden by stack)
