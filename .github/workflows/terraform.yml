@@ -1,0 +1,92 @@
+name: Terraform CI/CD Workflow for Azure Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select the environment to deploy resources (DEV, STG, PROD)"
+        required: true
+        default: "DEV"
+        type: choice
+        options:
+          - DEV
+          - STG
+          - PROD
+      action:
+        description: "Select the action to perform (Plan only or Plan and Apply)"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan          # Only runs Terraform Plan
+          - plan-and-apply # Runs Terraform Plan and Apply
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: ${{github.event.inputs.environment}}
+    env:
+      TF_ENV: ${{github.event.inputs.environment}} # Input variable for environment (DEV, STG, PROD)
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID:  ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v3
+
+    - name: 🔐 Validate Environment Input
+      run: |
+        if [[ ! "${{ env.TF_ENV }}" =~ ^(DEV|STG|PROD)$ ]]; then
+          echo "❌ Invalid environment. Must be one of: DEV, STG, PROD."
+          exit 1
+        fi
+        echo "✅ Deploying to ${{ env.TF_ENV }} environment."
+
+    - name: Set Environment-Specific VM Password in env variable
+      id: set-password
+      run: |
+        if [ "${{ env.TF_ENV }}" = "DEV" ]; then
+          echo "VM_PASSWORD=${{ secrets.VM_PASSWORD_DEV }}" >> $GITHUB_ENV
+        elif [ "${{ env.TF_ENV }}" = "STG" ]; then
+          echo "VM_PASSWORD=${{ secrets.VM_PASSWORD_STG }}" >> $GITHUB_ENV
+        elif [ "${{ env.TF_ENV }}" = "PROD" ]; then
+          echo "VM_PASSWORD=${{ secrets.VM_PASSWORD_PROD }}" >> $GITHUB_ENV
+        else
+          echo "❌ Invalid environment. Exiting."
+          exit 1
+        fi
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+        client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+        auth-type: SERVICE_PRINCIPAL
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Initialize Terraform
+      working-directory: terraform
+      run: terraform init
+
+    - name: 🔎 Terraform Plan
+      working-directory: terraform
+      env:
+         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=$VM_PASSWORD"
+
+    - name: 🚀 Terraform Apply
+      if: ${{ github.event.inputs.action == 'plan-and-apply' && success() }} # Conditional execution
+      working-directory: terraform
+      env:
+         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      run: terraform apply -auto-approve -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=$VM_PASSWORD"
