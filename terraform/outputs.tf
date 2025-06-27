@@ -30,12 +30,6 @@ output "load_balancer_name" {
   value       = azurerm_lb.lb.name
 }
 
-# Output the Network Security Group Names
-output "nsg_public_name" {
-  description = "The name of the Public Network Security Group"
-  value       = azurerm_network_security_group.nsg_public.name
-}
-
 output "nsg_backend_name" {
   description = "The name of the Backend Network Security Group"
   value       = azurerm_network_security_group.nsg_backend.name
