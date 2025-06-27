@@ -57,27 +57,27 @@ resource "azurerm_network_security_group" "nsg_backend" {
   location            = azurerm_resource_group.rg.location
 
   security_rule {
-    name                       = "allow_internal_traffic"
-    priority                   = 100
+    name                       = "ssh"
+    priority                   = 1022
     direction                  = "Inbound"
     access                     = "Allow"
-    protocol                   = "*"
+    protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefixes    = var.network_segment[var.environment]["source_address_prefixes"]
-    destination_address_prefix = "*"
+    destination_port_range     = "22"
+    source_address_prefixes    = "*"
+    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
   }
 
   security_rule {
-    name                       = "deny_all"
-    priority                   = 200
+    name                       = "web"
+    priority                   = 1080
     direction                  = "Inbound"
-    access                     = "Deny"
-    protocol                   = "*"
+    access                     = "Allow"
+    protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "*"
+    destination_port_range     = "80"
     source_address_prefix      = "*"
-    destination_address_prefix = "*"
+    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
   }
 }
 
