@@ -65,7 +65,7 @@ resource "azurerm_network_security_group" "nsg_backend" {
     source_port_range          = "*"
     destination_port_range     = "22"
     source_address_prefix      = "*"
-    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
+    destination_address_prefixes = var.network_segment[var.environment]["source_address_prefixes"]
   }
 
   security_rule {
@@ -77,7 +77,7 @@ resource "azurerm_network_security_group" "nsg_backend" {
     source_port_range          = "*"
     destination_port_range     = "80"
     source_address_prefix      = "*"
-    destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
+    destination_address_prefixes = var.network_segment[var.environment]["source_address_prefixes"]
   }
 }
 
