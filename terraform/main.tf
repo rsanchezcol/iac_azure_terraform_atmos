@@ -40,6 +40,15 @@ resource "azurerm_subnet" "backend_subnet" {
   address_prefixes     = var.network_segment[var.environment]["backend_subnet_prefixes"]
 }
 
+# Create a subnet in the Virtual Network for creating Azure Bastion
+# This subnet is required for Azure Bastion to work properly
+resource "azurerm_subnet" "bastion_subnet" {
+  name                 = "AzureBastionSubnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = var.network_segment[var.environment]["bastion_subnet_prefixes"]
+}
+
 # Create Network Security Group and rules to control the traffic
 # to and from the Virtual Machines in the Backend Pool
 resource "azurerm_network_security_group" "nsg_backend" {
@@ -55,7 +64,7 @@ resource "azurerm_network_security_group" "nsg_backend" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"
+    source_address_prefix      = "186.155.170.153"
     destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
   }
 
@@ -67,7 +76,7 @@ resource "azurerm_network_security_group" "nsg_backend" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "80"
-    source_address_prefix      = "*"
+    source_address_prefix      = "186.155.170.153"
     destination_address_prefix = var.network_segment[var.environment]["source_address_prefixes"]
   }
 }
@@ -77,6 +86,38 @@ resource "azurerm_network_security_group" "nsg_backend" {
 resource "azurerm_subnet_network_security_group_association" "nsg_backend_association" {
   subnet_id                 = azurerm_subnet.backend_subnet.id
   network_security_group_id = azurerm_network_security_group.nsg_backend.id
+}
+
+# Create Public IP Address for the Load Balancer
+resource "azurerm_public_ip" "public_ip" {
+  count               = 2
+  name                = "${var.environment}-load-balancer-public-ip-${count.index}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  allocation_method   = "Static"
+}
+
+# Create a NAT Gateway for outbound internet access of the 
+# Virtual Machines in the Backend Pool of the Load Balancer
+resource "azurerm_nat_gateway" "net_gw" {
+  name                = "${var.environment}-nat_gateway"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku_name            = "Standard"
+}
+
+# Associate one of the Public IPs to the NAT Gateway to route
+# traffic from the Virtual Machines to the internet
+resource "azurerm_nat_gateway_public_ip_association" "example" {
+  nat_gateway_id       = azurerm_nat_gateway.net_gw.id
+  public_ip_address_id = azurerm_public_ip.public_ip[0].id
+}
+
+# Associate the NAT Gateway to subnet to route 
+# traffic from the Virtual Machines to the internet
+resource "azurerm_subnet_nat_gateway_association" "net_gw_association" {
+  subnet_id      = azurerm_subnet.backend_subnet.id
+  nat_gateway_id = azurerm_nat_gateway.net_gw.id
 }
 
 # Create Virtual Machine (VM)
@@ -89,6 +130,22 @@ resource "azurerm_network_interface" "nic" {
     name                          = "${var.environment}-ip-config"
     subnet_id                     = azurerm_subnet.backend_subnet.id
     private_ip_address_allocation = "Dynamic"
+  }
+}
+
+# Create Azure Bastion for accessing the Virtual Machines
+# The Bastion Host will be used to access the Virtual 
+# Machines in the Backend Pool of the Load Balancer
+resource "azurerm_bastion_host" "example" {
+  name                = "${var.environment}-vm-bastion"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "Standard"
+
+  ip_configuration {
+    name                 = "${var.environment}-ipconfig"
+    subnet_id            = azurerm_subnet.bastion_subnet.id
+    public_ip_address_id = azurerm_public_ip.public_ip[1].id
   }
 }
 
@@ -140,14 +197,6 @@ resource "azurerm_virtual_machine_extension" "extension" {
 }
 SETTINGS
 
-}
-
-# Create Public IP Address for the Load Balancer
-resource "azurerm_public_ip" "public_ip" {
-  name                = "${var.environment}-load-balancer-public-ip"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  allocation_method   = "Static"
 }
 
 # Create Azure Load Balancer
