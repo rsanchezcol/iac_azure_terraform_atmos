@@ -257,22 +257,3 @@ resource "azurerm_key_vault" "kv" {
     secrets   = ["get", "list", "set"]
   }
 }
-
-# Add Secrets to Azure Key Vault
-resource "azurerm_key_vault_secret" "secrets" {
-  for_each            = var.key_vault_secrets
-  name                = each.key
-  value               = each.value
-  key_vault_id        = azurerm_key_vault.kv.id
-  content_type        = "string" # Optional for metadata
-}
-
-# Grant Access to Service Principal for Key Vault Secrets
-resource "azurerm_key_vault_access_policy" "service_principal_access" {
-  key_vault_id = azurerm_key_vault.kv.id
-  tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = var.service_principal_id
-
-  # Permissions
-  secret_permissions = ["get", "list"]
-}
