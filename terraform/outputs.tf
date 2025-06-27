@@ -18,12 +18,6 @@ output "backend_subnet_name" {
   value       = azurerm_subnet.backend_subnet.name
 }
 
-# Output the Public IP Address for Load Balancer
-output "load_balancer_public_ip" {
-  description = "The public IP address of the Load Balancer"
-  value       = azurerm_public_ip.public_ip.ip_address
-}
-
 # Output the Name of the Load Balancer
 output "load_balancer_name" {
   description = "The name of the Load Balancer"
@@ -45,10 +39,4 @@ output "vm_name" {
 output "network_interface_name" {
   description = "The name of the Network Interface attached to the VM"
   value       = azurerm_network_interface.nic.name
-}
-
-# Output the Public IP Host (allow external SSH or HTTP to the VM)
-output "vm_public_ip" {
-  description = "The public IP address of the virtual machine"
-  value       = azurerm_public_ip.public_ip.ip_address
 }
