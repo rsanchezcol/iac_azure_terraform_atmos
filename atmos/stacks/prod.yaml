@@ -5,7 +5,7 @@ vars:
   location: East US
   vm_name: terraform-vm-prod
   vm_size: Standard_D2als_v6
-  vm_admin_password: <secure-password-for-prod>
+  vm_admin_password: vm_admin_password: !!ref cmd:az keyvault secret show --name prod-vm-admin-password --vault-name prod-keyvault --query value -o tsv
   network_segment:
     address_space: ["10.2.0.0/16"]
     backend_subnet_prefixes: ["10.2.1.0/24"]
