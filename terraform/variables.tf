@@ -17,7 +17,7 @@ variable "vm_admin_password" {
 
 variable "vm_size" {
   description = "Size of the virtual machine"
-  default     = "Standard_DS1_v2"
+  default     = "Standard_D2lds_v6"
 }
 
 variable "location" {
