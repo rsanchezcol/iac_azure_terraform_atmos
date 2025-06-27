@@ -9,6 +9,22 @@ variable "environment" {
   }
 }
 
+variable "location" {
+  description = "Azure region where resources will be provisioned"
+  default     = "East US"
+}
+
+# VM name
+variable "vm_name" {
+  default     = "vm-webserver1"
+  description = "Name of the virtual machine"
+}
+
+variable "vm_size" {
+  description = "Size of the virtual machine"
+  default     = "Standard_D2als_v6"
+}
+
 variable "vm_admin_password" {
   description = "The admin password for the VM"
   type        = string
@@ -26,8 +42,8 @@ variable "vm_image" {
   })
   default = {
     publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
+    offer     = "ubuntu-24_04-lts"
+    sku       = "server"
     version   = "latest"
   }
 }
@@ -71,20 +87,4 @@ variable "network_segment" {
       source_address_prefixes = ["10.2.0.0/16"]
     }
   }
-}
-
-# VM name
-variable "vm_name" {
-  default     = "vm-webserver1"
-  description = "Name of the virtual machine"
-}
-
-variable "vm_size" {
-  description = "Size of the virtual machine"
-  default     = "Standard_D2lds_v6"
-}
-
-variable "location" {
-  description = "Azure region where resources will be provisioned"
-  default     = "East US"
 }
