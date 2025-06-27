@@ -108,31 +108,14 @@ resource "azurerm_network_security_group" "nsg_backend" {
   }
 }
 
-# Create Public IP Address for the Load Balancer
-resource "azurerm_public_ip" "public_ip" {
-  name                = "${var.environment}-load-balancer-public-ip"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  allocation_method   = "Static"
-}
-
-# Create Azure Load Balancer
-resource "azurerm_lb" "lb" {
-  name                = "${var.environment}-app-load-balancer"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  sku                 = "Standard"
-
-  frontend_ip_configuration {
-    name                 = "${var.environment}-frontend-ip-conf"
-    public_ip_address_id = azurerm_public_ip.public_ip.id
-  }
-}
-
-# Create Backend Pool for Load Balancer
-resource "azurerm_lb_backend_address_pool" "backend_pool" {
-  loadbalancer_id     = azurerm_lb.lb.id
-  name                = "${var.environment}-backend-pool"
+# Associate Network Interface to the Backend Pool of the Load Balancer
+# The Network Interface will be used to route traffic to the Virtual
+# Machines in the Backend Pool
+resource "azurerm_network_interface_backend_address_pool_association" "backend_address_pool_association" {
+  count                   = 1
+  network_interface_id    = azurerm_network_interface.nic.id
+  ip_configuration_name   = "${var.environment}-ipconfig-${count.index}"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
 }
 
 # Create Virtual Machine (VM)
@@ -180,22 +163,69 @@ resource "azurerm_virtual_machine" "vm" {
   }
 }
 
-# Provision File with "Hello World" Content
-resource "null_resource" "install_httpd" {
-  provisioner "remote-exec" {
-    inline = [
-      "sudo apt update",
-      "sudo apt install -y apache2",
-      "echo '<html><body><h1>Hello World</h1></body></html>' | sudo tee /var/www/html/index.html",
-      "sudo systemctl start apache2",
-      "sudo systemctl enable apache2"
-    ]
+# Enable virtual machine extension and install Nginx
+# The script will update the package list, install Nginx,
+# and create a simple HTML page
+resource "azurerm_virtual_machine_extension" "extension" {
+  name                 = "Nginx"
+  virtual_machine_id   = azurerm_linux_virtual_machine.vm.id
+  publisher            = "Microsoft.Azure.Extensions"
+  type                 = "CustomScript"
+  type_handler_version = "2.0"
 
-    connection {
-      type     = "ssh"
-      host     = azurerm_public_ip.public_ip.ip_address
-      user     = "azureuser"
-      password = var.vm_admin_password
-    }
+  settings = <<SETTINGS
+{
+ "commandToExecute": "sudo apt-get update && sudo apt-get install nginx -y && echo \"Hello World from $(hostname)\" > /var/www/html/index.html && sudo systemctl restart nginx"
+}
+SETTINGS
+
+}
+
+# Create Public IP Address for the Load Balancer
+resource "azurerm_public_ip" "public_ip" {
+  name                = "${var.environment}-load-balancer-public-ip"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  allocation_method   = "Static"
+}
+
+# Create Azure Load Balancer
+resource "azurerm_lb" "lb" {
+  name                = "${var.environment}-app-load-balancer"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "Standard"
+
+  frontend_ip_configuration {
+    name                 = "${var.environment}-frontend-ip-conf"
+    public_ip_address_id = azurerm_public_ip.public_ip.id
   }
+}
+
+# Create a Load Balancer Probe to check the health of the 
+# Virtual Machines in the Backend Pool
+resource "azurerm_lb_probe" "lbprobe" {
+  loadbalancer_id = azurerm_lb.lb.id
+  name            = "${var.environment}-test-probe"
+  port            = 80
+}
+
+# Create Backend Pool for Load Balancer
+resource "azurerm_lb_backend_address_pool" "backend_pool" {
+  loadbalancer_id     = azurerm_lb.lb.id
+  name                = "${var.environment}-backend-pool"
+}
+
+# Create a Load Balancer Rule to define how traffic will be
+# distributed to the Virtual Machines in the Backend Pool
+resource "azurerm_lb_rule" "example" {
+  loadbalancer_id                = azurerm_lb.lb.id
+  name                           = "${var.environment}-test-rule"
+  protocol                       = "Tcp"
+  frontend_port                  = 80
+  backend_port                   = 80
+  disable_outbound_snat          = true
+  frontend_ip_configuration_name = "${var.environment}-frontend-ip"
+  probe_id                       = azurerm_lb_probe.lbprobe.id
+  backend_address_pool_ids       = [azurerm_lb_backend_address_pool.backend_pool.id]
 }
