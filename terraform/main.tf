@@ -131,7 +131,7 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-resource "azurerm_linux_virtual_machine" "vm" {
+resource "azurerm_virtual_machine" "vm" {
   name                  = "${var.vm_name}-${var.environment}"
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
@@ -168,7 +168,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 # and create a simple HTML page
 resource "azurerm_virtual_machine_extension" "extension" {
   name                 = "Nginx"
-  virtual_machine_id   = azurerm_linux_virtual_machine.vm.id
+  virtual_machine_id   = azurerm_virtual_machine.vm.id
   publisher            = "Microsoft.Azure.Extensions"
   type                 = "CustomScript"
   type_handler_version = "2.0"
