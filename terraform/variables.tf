@@ -15,10 +15,31 @@ variable "vm_admin_password" {
   sensitive   = true
 }
 
-# Define OS disk properties
+# VM image properties
+variable "vm_image" {
+  description = "VM image properties"
+  type        = object({
+    publisher = string
+    offer     = string
+    sku       = string
+    version   = string
+  })
+  default = {
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "18.04-LTS"
+    version   = "latest"
+  }
+}
+
+# OS disk properties
 variable "os_disk" {
-  description = "OS disk configuration"
-  type        = map(string)
+  description = "OS disk properties"
+  type        = object({
+    caching           = string
+    create_option     = string
+    managed_disk_type = string
+  })
   default = {
     caching           = "ReadWrite"
     create_option     = "FromImage"
