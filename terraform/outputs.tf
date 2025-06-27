@@ -12,12 +12,6 @@ output "virtual_network_name" {
   value       = azurerm_virtual_network.vnet.name
 }
 
-# Output the Public Subnet Name
-output "public_subnet_name" {
-  description = "The name of the public subnet"
-  value       = azurerm_subnet.public_subnet.name
-}
-
 # Output the Backend Subnet Name
 output "backend_subnet_name" {
   description = "The name of the backend subnet"
