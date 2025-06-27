@@ -207,8 +207,9 @@ resource "azurerm_lb" "lb" {
   sku                 = "Standard"
 
   frontend_ip_configuration {
-    name                 = "${var.environment}-frontend-ip-conf"
-    public_ip_address_id = azurerm_public_ip.public_ip.id
+    name                          = "${var.environment}-frontend-ip-conf"
+    subnet_id                     = azurerm_subnet.backend_subnet.id
+    private_ip_address_allocation = "Dynamic"
   }
 }
 
