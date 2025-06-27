@@ -7,6 +7,10 @@ on:
         description: "Which environment to deploy? (DEV, STG, PROD)"
         required: true
         default: "DEV"
+      action:
+        description: "Action to perform (plan, plan-and-apply)"
+        required: true
+        default: "plan" # Default action is terraform plan
 
 permissions:
   id-token: write
@@ -72,3 +76,10 @@ jobs:
       env:
          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       run: terraform plan -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=$VM_PASSWORD"
+
+    - name: 🚀 Terraform Apply
+      if: ${{ github.event.inputs.action == 'plan-and-apply' && success() }} # Conditional execution
+      working-directory: terraform
+      env:
+         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      run: terraform apply -auto-approve -var "environment=${{ env.TF_ENV }}" -var "vm_admin_password=$VM_PASSWORD"
