@@ -1,0 +1,22 @@
+# stacks/dev.yaml
+
+vars:
+  environment: DEV
+  location: East US
+  vm_name: terraform-vm-dev
+  vm_size: Standard_D2als_v6
+  vm_admin_password: !!ref cmd:az keyvault secret show --name dev-vm-admin-password --vault-name dev-keyvault --query value -o tsv
+  network_segment:
+    address_space: ["10.0.0.0/16"]
+    backend_subnet_prefixes: ["10.0.1.0/24"]
+    bastion_subnet_prefixes: ["10.0.2.0/24"]
+    source_address_prefixes: ["10.0.0.0/16"]
+  vm_image:
+    publisher: Canonical
+    offer: ubuntu-24_04-lts
+    sku: server
+    version: latest
+  os_disk:
+    caching: ReadWrite
+    create_option: FromImage
+    managed_disk_type: Standard_LRS
