@@ -1,0 +1,22 @@
+# stacks/prod.yaml
+
+vars:
+  environment: PROD
+  location: East US
+  vm_name: terraform-vm-prod
+  vm_size: Standard_D2als_v6
+  vm_admin_password: vm_admin_password: !!ref cmd:az keyvault secret show --name prod-vm-admin-password --vault-name prod-keyvault --query value -o tsv
+  network_segment:
+    address_space: ["10.2.0.0/16"]
+    backend_subnet_prefixes: ["10.2.1.0/24"]
+    bastion_subnet_prefixes: ["10.2.2.0/24"]
+    source_address_prefixes: ["10.2.0.0/16"]
+  vm_image:
+    publisher: Canonical
+    offer: ubuntu-24_04-lts
+    sku: server
+    version: latest
+  os_disk:
+    caching: ReadWrite
+    create_option: FromImage
+    managed_disk_type: Standard_LRS
